@@ -46,7 +46,7 @@ int main(int argc, char **argv)
             .build();
     cv::imwrite("output/split_0_prepared.png", rnt::img::process(ocr_visitor, ocr_prep));
 
-    rnt::txt::Reader ocr_reader;
+    rnt::txt::Reader ocr_reader{"eng"};
     std::string retrieved_text = ocr_reader.get_text("output/split_0_prepared.png");
     std::cout << retrieved_text;
 

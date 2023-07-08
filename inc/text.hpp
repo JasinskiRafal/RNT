@@ -8,10 +8,11 @@ namespace rnt
     namespace txt
     {
         class Reader {
-            std::unique_ptr<tesseract::TessBaseAPI> api;
+            struct ReaderAPI;
+            std::unique_ptr<ReaderAPI> _api;
 
             public:
-            Reader();
+            Reader(std::string language);
             Reader(const Reader&) = delete;
             void operator=(const Reader&) = delete;
             Reader(Reader&&) = delete;

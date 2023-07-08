@@ -13,8 +13,10 @@ constexpr double kSplitThresholdValue = 230;
 constexpr double kOCRThresholdValue = 140;
 
 void simple_threshold_split(const rnt::img::File file);
-void adaptive_threshold_test(const rnt::img::File file);
-void text_recognition_test(const std::string filename);
+void adaptive_threshold_split(const rnt::img::File file);
+void text_recognition_procedure(const std::string filename);
+
+std::vector<std::string> split_image_names;
 
 int main(int argc, char **argv)
 {
@@ -36,19 +38,9 @@ int main(int argc, char **argv)
 
     simple_threshold_split(test_image);
 
-    rnt::img::File tesseract_image("output/split_0.png");
-    rnt::img::operations::Sequence ocr_prep;
-    rnt::img::operations::OperationVisitor ocr_visitor(tesseract_image.get_image().value());
-    rnt::img::operations::SequenceBuilder builder;
-    ocr_prep =
-        builder.convert_colour(cv::COLOR_BGR2GRAY)
-            .simple_threshold(kOCRThresholdValue , kMaxValue, kThresholdType)
-            .build();
-    cv::imwrite("output/split_0_prepared.png", rnt::img::process(ocr_visitor, ocr_prep));
-
-    rnt::txt::Reader ocr_reader{"eng"};
-    std::string retrieved_text = ocr_reader.get_text("output/split_0_prepared.png");
-    std::cout << retrieved_text;
+    for (auto image_name : split_image_names) {
+        text_recognition_procedure(image_name);
+    }
 
     return 0;
 }
@@ -85,10 +77,11 @@ void simple_threshold_split(rnt::img::File file)
         output_path.replace_filename(output_file.str());
 
         cv::imwrite(output_path, split_images[i]);
+        split_image_names.push_back(output_path);
     }
 }
 
-void adaptive_threshold_test(rnt::img::File file)
+void adaptive_threshold_split(rnt::img::File file)
 {
     constexpr int kBlockSize = 7;
     constexpr double kCalculationConstant = 1;
@@ -109,4 +102,23 @@ void adaptive_threshold_test(rnt::img::File file)
 
     rnt::Image adaptive_image = rnt::img::process(adaptive_visitor, adaptive_threshold_sequence);
     cv::imwrite("adaptive_threshold_test.png", adaptive_image);
+}
+
+void text_recognition_procedure(std::string filename)
+{
+    rnt::img::File tesseract_image(filename);
+    rnt::img::operations::Sequence ocr_prep;
+    rnt::img::operations::OperationVisitor ocr_visitor(tesseract_image.get_image().value());
+    rnt::img::operations::SequenceBuilder builder;
+    ocr_prep =
+        builder.convert_colour(cv::COLOR_BGR2GRAY)
+            .simple_threshold(kOCRThresholdValue, kMaxValue, kThresholdType)
+            .build();
+
+    filename.replace(filename.find("split"), sizeof("split") - 1, "prepared");
+    cv::imwrite(filename, rnt::img::process(ocr_visitor, ocr_prep));
+
+    rnt::txt::Reader ocr_reader{"eng"};
+    std::string retrieved_text = ocr_reader.get_text(filename);
+    std::cout << retrieved_text;
 }

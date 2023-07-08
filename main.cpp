@@ -1,6 +1,7 @@
 #include <iostream>
 #include <image.hpp>
 #include <thread>
+#include <filesystem>
 
 constexpr cv::BorderTypes kBorderType = cv::BorderTypes::BORDER_DEFAULT;
 
@@ -11,8 +12,14 @@ void adaptive_threshold_test(const rnt::img::File file);
 
 int main(int argc, char **argv)
 {
-    // TODO: Change these hardcoded paths to CLI passed arguments
-    rnt::img::File test_image("/home/rafalj/RapidNodeTaker/assets/input/notes.png");
+    if (argc != 2) {
+        std::cerr << "Started the test application without an image path\n";
+        return -1;
+    }
+
+    std::filesystem::path image_path{argv[1]};
+
+    rnt::img::File test_image(image_path);
 
     if (!test_image.is_correct())
     {
@@ -21,7 +28,6 @@ int main(int argc, char **argv)
     }
 
     simple_threshold_test(test_image);
-    adaptive_threshold_test(test_image);
 
     return 0;
 }
@@ -36,7 +42,7 @@ void simple_threshold_test(rnt::img::File file)
 
     rnt::img::operations::SequenceBuilder builder;
     initial_sequence =
-        builder.blur(cv::Size(4, 4), cv::Point(-1, -1), kBorderType)
+        builder.blur(cv::Size(5, 5), cv::Point(-1, -1), kBorderType)
             .convert_colour(cv::COLOR_BGR2GRAY)
             .simple_threshold(kThresholdValue, kMaxValue, kThresholdType)
             .build();
@@ -49,11 +55,17 @@ void simple_threshold_test(rnt::img::File file)
     rnt::img::Rectangles bounding_rectangles = rnt::img::make_bounding_rectangles(first_process_contours);
     rnt::Images split_images = rnt::img::split_image(file.get_image().value(), bounding_rectangles);
 
+    std::filesystem::create_directory("output");
+    std::filesystem::path output_path{"output/split_0.png"};
+
     for (int i = 0; i < split_images.size(); i++)
     {
-        std::stringstream output_file_name;
-        output_file_name << "/home/rafalj/RapidNodeTaker/assets/split_photos/split " << i << ".png";
-        cv::imwrite(output_file_name.str(), split_images[i]);
+        std::stringstream output_file;
+        output_file << "split_" << i << ".png";
+
+        output_path.replace_filename(output_file.str());
+
+        cv::imwrite(output_path, split_images[i]);
     }
 }
 
@@ -77,5 +89,6 @@ void adaptive_threshold_test(rnt::img::File file)
             .build();
 
     rnt::Image adaptive_image = rnt::img::process(adaptive_visitor, adaptive_threshold_sequence);
-    cv::imwrite("/home/rafalj/RapidNodeTaker/assets/adaptive_threshold_test.png", adaptive_image);
+    cv::imwrite("adaptive_threshold_test.png", adaptive_image);
 }
+

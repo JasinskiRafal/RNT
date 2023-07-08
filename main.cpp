@@ -1,18 +1,25 @@
 #include <iostream>
-#include <image.hpp>
 #include <thread>
 #include <filesystem>
 
+#include <image.hpp>
+#include <text.hpp>
+
 constexpr cv::BorderTypes kBorderType = cv::BorderTypes::BORDER_DEFAULT;
+constexpr cv::ThresholdTypes kThresholdType = cv::THRESH_BINARY_INV;
 
 constexpr double kMaxValue = 255;
+constexpr double kSplitThresholdValue = 230;
+constexpr double kOCRThresholdValue = 140;
 
-void simple_threshold_test(const rnt::img::File file);
+void simple_threshold_split(const rnt::img::File file);
 void adaptive_threshold_test(const rnt::img::File file);
+void text_recognition_test(const std::string filename);
 
 int main(int argc, char **argv)
 {
-    if (argc != 2) {
+    if (argc != 2)
+    {
         std::cerr << "Started the test application without an image path\n";
         return -1;
     }
@@ -27,15 +34,27 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    simple_threshold_test(test_image);
+    simple_threshold_split(test_image);
+
+    rnt::img::File tesseract_image("output/split_0.png");
+    rnt::img::operations::Sequence ocr_prep;
+    rnt::img::operations::OperationVisitor ocr_visitor(tesseract_image.get_image().value());
+    rnt::img::operations::SequenceBuilder builder;
+    ocr_prep =
+        builder.convert_colour(cv::COLOR_BGR2GRAY)
+            .simple_threshold(kOCRThresholdValue , kMaxValue, kThresholdType)
+            .build();
+    cv::imwrite("output/split_0_prepared.png", rnt::img::process(ocr_visitor, ocr_prep));
+
+    rnt::txt::Reader ocr_reader;
+    std::string retrieved_text = ocr_reader.get_text("output/split_0_prepared.png");
+    std::cout << retrieved_text;
 
     return 0;
 }
 
-void simple_threshold_test(rnt::img::File file)
+void simple_threshold_split(rnt::img::File file)
 {
-    constexpr double kThresholdValue = 230;
-    constexpr cv::ThresholdTypes kThresholdType = cv::THRESH_BINARY_INV;
 
     rnt::img::operations::Sequence initial_sequence;
     rnt::img::operations::OperationVisitor first_visitor(file.get_image().value());
@@ -44,7 +63,7 @@ void simple_threshold_test(rnt::img::File file)
     initial_sequence =
         builder.blur(cv::Size(5, 5), cv::Point(-1, -1), kBorderType)
             .convert_colour(cv::COLOR_BGR2GRAY)
-            .simple_threshold(kThresholdValue, kMaxValue, kThresholdType)
+            .simple_threshold(kSplitThresholdValue, kMaxValue, kThresholdType)
             .build();
 
     rnt::Image first_process_image = rnt::img::process(first_visitor,
@@ -91,4 +110,3 @@ void adaptive_threshold_test(rnt::img::File file)
     rnt::Image adaptive_image = rnt::img::process(adaptive_visitor, adaptive_threshold_sequence);
     cv::imwrite("adaptive_threshold_test.png", adaptive_image);
 }
-

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <thread>
 #include <filesystem>
+#include <vector>
+#include <atomic>
 
 #include <image.hpp>
 #include <text.hpp>
@@ -14,7 +16,7 @@ constexpr double kOCRThresholdValue = 140;
 
 void simple_threshold_split(const rnt::img::File file);
 void adaptive_threshold_split(const rnt::img::File file);
-void text_recognition_procedure(const std::string filename);
+std::string text_recognition_procedure(const std::string filename);
 
 std::vector<std::string> split_image_names;
 
@@ -38,8 +40,10 @@ int main(int argc, char **argv)
 
     simple_threshold_split(test_image);
 
+    std::vector<std::string> recognized_text;
+
     for (auto image_name : split_image_names) {
-        text_recognition_procedure(image_name);
+        recognized_text.push_back(text_recognition_procedure(image_name));
     }
 
     return 0;
@@ -104,7 +108,7 @@ void adaptive_threshold_split(rnt::img::File file)
     cv::imwrite("adaptive_threshold_test.png", adaptive_image);
 }
 
-void text_recognition_procedure(std::string filename)
+std::string text_recognition_procedure(std::string filename)
 {
     rnt::img::File tesseract_image(filename);
     rnt::img::operations::Sequence ocr_prep;
@@ -120,5 +124,5 @@ void text_recognition_procedure(std::string filename)
 
     rnt::txt::Reader ocr_reader{"eng"};
     std::string retrieved_text = ocr_reader.get_text(filename);
-    std::cout << retrieved_text;
+    return retrieved_text;
 }
